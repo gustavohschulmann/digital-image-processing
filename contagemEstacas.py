@@ -24,16 +24,13 @@ def adjust_gamma(image, gamma):
 gamma = adjust_gamma(image,1.5)
 
 #Efeito Shift Filter, para reduzir detalhamento e imperfeições no raio interno das toras
-
 shifted = cv2.pyrMeanShiftFiltering(gamma, 30, 51)
-# cv2.imshow("Input", image)
 
 # Deixa a imagem em escala de cinza
 # Aplicar o metodo de thresholding
 gray = cv2.cvtColor(shifted, cv2.COLOR_BGR2GRAY)
 thresh = cv2.threshold(gray, 0, 255,
     cv2.THRESH_BINARY | cv2.THRESH_OTSU)[1]
-# cv2.imshow("Thresh", thresh)
 
 # utilizar a transfomada de distancia euclidiana para calcular 
 # a distancia entre os valores de pico
@@ -71,7 +68,6 @@ def circle_can_be_printed(x, y):
 
 # Realiza um looping em cima de rotulos exclusivos 
 # retornados pelo algoritmo watershed
-    
 for label in np.unique(labels):
     # Verifica se o label for zero, neste caso é considerado background da imagem
     # simplesmente ignora
@@ -105,7 +101,7 @@ for label in np.unique(labels):
     
 print("[INFO] {} estacas encontradas!!".format(circle_count))
 
-# cv2.imshow("Image", image)
+cv2.imwrite("gamma.jpg", gamma)
 cv2.imwrite('shifted.jpg', D)
 cv2.imwrite('gray.jpg', gray)
 cv2.imwrite('thresh.jpg', thresh)
