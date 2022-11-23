@@ -9,9 +9,6 @@ import numpy as np
 import math
 
 
-image = cv2.imread('imagem1.jpeg')
-hh, ww = image.shape[:2]
-
 def adjust_gamma(image, gamma):
     # Função para ajustar os valores gamma 
     invGamma = 1.0 / gamma
@@ -21,6 +18,30 @@ def adjust_gamma(image, gamma):
     # Usando função LUT para dar efeito gamma utilizando os valores da tabela gerada acima
     return cv2.LUT(image, table)
 
+# Verifica se a distancia entre pontos de pico estão dentro
+# de uma distancia toleravel
+def circle_can_be_printed(x, y):
+    flag = 1
+    if(len(printed_circles) == 0):
+        return 1
+    for printed in printed_circles:
+        distance = np.sqrt(pow((x - printed[0]), 2) + pow(y - printed[1], 2))
+        if(distance < distance_tolerance):
+            flag = 0
+    if(flag == 1):
+        return 1
+    else:
+        return 0
+
+
+
+image = cv2.imread('imagem1.jpeg')
+hh, ww = image.shape[:2]
+circle_count = 0
+printed_circles = []
+distance_tolerance = 80
+
+#Redução de sombras
 gamma = adjust_gamma(image,1.5)
 
 #Efeito Shift Filter, para reduzir detalhamento e imperfeições no raio interno das toras
@@ -38,33 +59,11 @@ D = ndimage.distance_transform_edt(thresh)
 localMax = peak_local_max(D, indices=False, min_distance=20,
     labels=thresh)
 
-    
 # Fazer uma analise dos componentes que estão dentro dos valores de pico
 # e aplicar o metodo de watershed
 markers = ndimage.label(localMax, structure=np.ones((3, 3)))[0]
 labels = watershed(-D, markers, mask=thresh)
 print("[INFO] {} segmentos únicos encontrados".format(len(np.unique(labels)) - 1))
-
-cv2.imwrite('labels.jpg', labels)
-
-circle_count = 0
-printed_circles = []
-distance_tolerance = 80
-
-# Verifica se a distancia entre pontos de pico estão dentro
-# de uma distancia toleravel
-def circle_can_be_printed(x, y):
-    flag = 1
-    if(len(printed_circles) == 0):
-        return 1
-    for printed in printed_circles:
-        distance = np.sqrt(pow((x - printed[0]), 2) + pow(y - printed[1], 2))
-        if(distance < distance_tolerance):
-            flag = 0
-    if(flag == 1):
-        return 1
-    else:
-        return 0
 
 # Realiza um looping em cima de rotulos exclusivos 
 # retornados pelo algoritmo watershed
@@ -78,21 +77,27 @@ for label in np.unique(labels):
     mask[labels == label] = 255
 
     # Detecta contornos e seleciona o maior 
-
     cnts = cv2.findContours(mask.copy(), cv2.RETR_EXTERNAL,
         cv2.CHAIN_APPROX_SIMPLE)
     cnts = imutils.grab_contours(cnts)
-    print (cnts)
     c = max(cnts, key=cv2.contourArea)
 
-    # Desenha o circulo em volta do objeto
+    r_max = 115
+    r_min = 30
+    y_max = 1200
+    y_min = 50
+    x_min = 2
     
+    # Desenha o circulo em volta do objeto
+    # Filtra Bordas
     ((x, y), r) = cv2.minEnclosingCircle(c)
-    if (r < 115):
-        if (r > 30):
-                if (y > 50):
-                    if (x > 2):
-                        if (y < 1200):
+    if (r < r_max):
+        if (r > r_min):
+                if (y > y_min):
+                    if (x > x_min):
+                        if (y < y_max):
+                            # Verifica se a distancia entre pontos de pico estão dentro
+                            # de uma distancia toleravel
                             if(circle_can_be_printed(int(x), int(y))):
                                 cv2.circle(image, (int(x), int(y)), int(r), (0, 255, 0), 2)
                                 circle_count = circle_count + 1
@@ -101,6 +106,7 @@ for label in np.unique(labels):
     
 print("[INFO] {} estacas encontradas!!".format(circle_count))
 
+cv2.imwrite('labels.jpg', labels)
 cv2.imwrite("gamma.jpg", gamma)
 cv2.imwrite('shifted.jpg', D)
 cv2.imwrite('gray.jpg', gray)
